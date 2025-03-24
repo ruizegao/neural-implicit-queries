@@ -123,14 +123,14 @@ def render_random_camera(args, implicit_func, params, cast_frustum, cast_tree_ba
     avg_rendering_time = sum(rendering_times) / len(rendering_times)
     print("Average rendering time:", avg_rendering_time)
     # np.savez_compressed('birdcage_grid_cam_exact_1e-4.npz', imgs)
-    np.savez_compressed('birdcage_grid_cam_baseline.npz', imgs)
+    return imgs
 
 def main():
     parser = argparse.ArgumentParser()
 
     # Build arguments
     parser.add_argument("input", type=str)
-
+    parser.add_argument("--output", type=str)
     parser.add_argument("--mode", type=str, default='affine_fixed')
     parser.add_argument("--cast_frustum", action='store_true')
     parser.add_argument("--cast_tree_based", action='store_true')
@@ -151,6 +151,7 @@ def main():
     opts['res_scale'] = 1
     opts['tree_max_depth'] = 12
     opts['tree_split_aff'] = False
+    opts['hit_eps'] = 1e-4
     cast_frustum = args.cast_frustum
     cast_tree_based = args.cast_tree_based
     mode = args.mode
@@ -199,7 +200,9 @@ def main():
     # save_render_current_view(args, implicit_func, params, cast_frustum, cast_tree_based, opts, matcaps, surf_color)
     # t1 = time.time()
     # print("time spent on ray casting: ", t1 - t0)
-    render_random_camera(args, implicit_func, params, cast_frustum, cast_tree_based, opts, matcaps, surf_color)
+    results = render_random_camera(args, implicit_func, params, cast_frustum, cast_tree_based, opts, matcaps, surf_color)
+    # np.savez_compressed('hammer_grid_cam_baseline_1e-4.npz', results)
+    np.savez_compressed(args.output, results)
 
 
 if __name__ == '__main__':
