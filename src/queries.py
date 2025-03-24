@@ -25,7 +25,7 @@ import time
 
 def get_default_cast_opts():
     d = {
-        'hit_eps': 0.001,
+        'hit_eps': 0.0001,
         'max_dist': 10.,
         'n_max_step': 512,
         'n_substeps': 1,

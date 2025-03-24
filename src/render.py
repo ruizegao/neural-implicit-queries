@@ -12,6 +12,7 @@ import geometry
 import queries
 from utils import *
 import affine
+import time
 
 
 # theta_x/y should be
@@ -90,7 +91,7 @@ def outward_normals(funcs_tuple, params_tuple, hit_pos, hit_ids, eps, method='fi
     return jax.vmap(this_normal_one)(hit_pos, hit_ids)
 
 
-# @partial(jax.jit, static_argnames=("func","res"))
+# @partial(jax.jit, static_argnames=("funcs_tuple","res"))
 def render_image(funcs_tuple, params_tuple, eye_pos, look_dir, up_dir, left_dir, res, fov_deg, frustum, opts,
                  shading="normal", shading_color_tuple=((0.157, 0.613, 1.000)), matcaps=None, tonemap=False,
                  shading_color_func=None):
@@ -150,7 +151,7 @@ def render_image(funcs_tuple, params_tuple, eye_pos, look_dir, up_dir, left_dir,
 
     return img, depth, counts, hit_ids, n_eval, -1
 
-
+# @partial(jax.jit, static_argnames=("funcs_tuple","res"))
 def render_image_naive(funcs_tuple, params_tuple, eye_pos, look_dir, up_dir, left_dir, res, fov_deg, frustum, opts,
                        shading="normal", shading_color_tuple=((0.157, 0.613, 1.000)), matcaps=None, tonemap=False,
                        shading_color_func=None, tree_based=False):
@@ -172,6 +173,7 @@ def render_image_naive(funcs_tuple, params_tuple, eye_pos, look_dir, up_dir, lef
         raise ValueError("render_image tuple arguments should all be same length")
 
     ray_roots, ray_dirs = generate_camera_rays(eye_pos, look_dir, up_dir, res=res, fov_deg=fov_deg)
+    time_render_start = time.time()
     if frustum:
         # == Frustum raycasting
 
@@ -194,26 +196,22 @@ def render_image_naive(funcs_tuple, params_tuple, eye_pos, look_dir, up_dir, lef
         t_raycast.block_until_ready()
 
     hit_pos = ray_roots + t_raycast[:, np.newaxis] * ray_dirs
-    time_render_start = time.time()
     hit_normals = outward_normals(funcs_tuple, params_tuple, hit_pos, hit_ids, opts['hit_eps'])
-    time_normals_done = time.time()
-    print("Normals calculated: ", time_normals_done - time_render_start)
     hit_color = shade_image(shading, ray_dirs, hit_pos, hit_normals, hit_ids, up_dir, matcaps, shading_color_tuple,
                             shading_color_func=shading_color_func)
     img = jnp.where(hit_ids[:, np.newaxis], hit_color, jnp.ones((res * res, 3)))
-    time_render_end = time.time()
-    print("Rendering time:", time_render_end - time_render_start)
 
     if tonemap:
         # We intentionally tonemap before compositing in the shadow. Otherwise the white level clips the shadow and gives it a hard edge.
         img = tonemap_image(img)
-
     img = img.reshape(res, res, 3)
     depth = t_raycast.reshape(res, res)
     counts = counts.reshape(res, res)
     hit_ids = hit_ids.reshape(res, res)
+    time_render_end = time.time()
+    print("Rendering time:", time_render_end - time_render_start)
 
-    return img, depth, counts, hit_ids, n_eval, -1
+    return img, depth, counts, hit_ids, n_eval, time_render_end - time_render_start
 
 
 def tonemap_image(img, gamma=2.2, white_level=.75, exposure=1.):
