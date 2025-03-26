@@ -111,7 +111,7 @@ def construct_uniform_unknown_levelset_tree(func, params, lower, upper, node_ter
     if node_terminate_thresh is None and split_depth is None:
         raise ValueError("must specify at least one of node_terminate_thresh or split_depth as a terminating condition")
     if node_terminate_thresh is None:
-        node_terminate_thresh = 9999999999
+        node_terminate_thresh = 9999999
 
     d = lower.shape[-1]
     B = batch_process_size
@@ -150,7 +150,9 @@ def construct_uniform_unknown_levelset_tree(func, params, lower, upper, node_ter
             N_curr_nodes / this_b))  # only the batches which are occupied (since valid nodes are densely packed at the start)
 
         # Detect when to quit. On the last iteration we need to not do any more splitting, but still process existing nodes one last time
-        quit_next = (N_curr_nodes >= node_terminate_thresh) or i_split + 1 == n_splits
+        quit_next_0 = (N_curr_nodes >= node_terminate_thresh)
+        quit_next_1 = i_split + 1 == n_splits
+        quit_next = quit_next_0 or quit_next_1
         do_continue_splitting = not quit_next
 
         print(
@@ -521,7 +523,7 @@ def sample_surface_uniform(func, params, lower, upper, n_samples, width, rngkey)
     return found_sample_points
 
 
-@partial(jax.jit, static_argnames=("func", "n_subcell_depth"), donate_argnums=(7,))
+# @partial(jax.jit, static_argnames=("func", "n_subcell_depth"), donate_argnums=(7,))
 def hierarchical_marching_cubes_extract_iter(func, params, mc_data, n_subcell_depth, node_valid, node_lower, node_upper,
                                              tri_pos_out, n_out_written):
     # run the extraction routine

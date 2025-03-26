@@ -96,6 +96,7 @@ def main():
             implicit_func, params = implicit_mlp_utils.generate_implicit_from_file(args.input, mode=mode, **affine_opts)
 
     mc_mesh = do_hierarchical_mc(opts, implicit_func, params, n_mc_depth=args.n_mc_depth)
+    mc_mesh.show()
     mc_mesh.export(args.output)
 
 
